@@ -44,6 +44,25 @@ export async function create({ condition, price, message }) {
     })()
   `);
 
+  if (condition) {
+    await evaluate(`
+      (function() {
+        var selects = document.querySelectorAll('[class*="alert"] select, [class*="condition"] select');
+        for (var i = 0; i < selects.length; i++) {
+          var opts = selects[i].options;
+          for (var j = 0; j < opts.length; j++) {
+            if (opts[j].value.toLowerCase() === ${safeString(String(condition).toLowerCase())}
+                || opts[j].text.toLowerCase() === ${safeString(String(condition).toLowerCase())}) {
+              selects[i].selectedIndex = j;
+              selects[i].dispatchEvent(new Event('change', { bubbles: true }));
+              break;
+            }
+          }
+        }
+      })()
+    `);
+  }
+
   if (message) {
     await evaluate(`
       (function() {
@@ -100,7 +119,7 @@ export async function list() {
       })
       .catch(function(e) { return { alerts: [], error: e.message }; })
   `);
-  return { success: true, alert_count: result?.alerts?.length || 0, source: 'internal_api', alerts: result?.alerts || [], error: result?.error };
+  return { success: !result?.error, alert_count: result?.alerts?.length || 0, source: 'internal_api', alerts: result?.alerts || [], error: result?.error };
 }
 
 export async function deleteAlerts({ delete_all }) {

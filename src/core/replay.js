@@ -29,7 +29,7 @@ export async function start({ date, _deps } = {}) {
   // page context, otherwise the promise is fire-and-forget and replay state says
   // "started" but stepping doesn't work (issue #26).
   if (date) {
-    const ts = new Date(date).getTime();
+    const ts = Math.floor(new Date(date).getTime() / 1000);
     if (isNaN(ts)) throw new Error(`Invalid date: "${date}". Use YYYY-MM-DD format.`);
     await evaluate(`${rp}.selectDate(${ts}).then(function() { return 'ok'; })`);
   } else {

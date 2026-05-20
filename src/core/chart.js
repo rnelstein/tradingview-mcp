@@ -116,7 +116,7 @@ export async function manageIndicator({ action, indicator, entity_id, inputs: in
 }
 
 export async function getVisibleRange() {
-  const result = await evaluate(`
+  const result = await _evaluate(`
     (function() {
       var chart = ${CHART_API};
       return { visible_range: chart.getVisibleRange(), bars_range: chart.getVisibleBarsRange() };
@@ -138,9 +138,10 @@ export async function setVisibleRange({ from, to, _deps }) {
       var startIdx = bars.firstIndex();
       var endIdx = bars.lastIndex();
       var fromIdx = startIdx, toIdx = endIdx;
+      var fromFound = false;
       for (var i = startIdx; i <= endIdx; i++) {
         var v = bars.valueAt(i);
-        if (v && v[0] >= ${f} && fromIdx === startIdx) fromIdx = i;
+        if (!fromFound && v && v[0] >= ${f}) { fromIdx = i; fromFound = true; }
         if (v && v[0] <= ${t}) toIdx = i;
       }
       ts.zoomToBarsRange(fromIdx, toIdx);
@@ -157,7 +158,8 @@ export async function setVisibleRange({ from, to, _deps }) {
   return { success: true, requested: { from, to }, actual: actual || { from: 0, to: 0 } };
 }
 
-export async function scrollToDate({ date }) {
+export async function scrollToDate({ date, _deps }) {
+  const { evaluate } = _resolve(_deps);
   let timestamp;
   if (/^\d+$/.test(date)) timestamp = Number(date);
   else timestamp = Math.floor(new Date(date).getTime() / 1000);
@@ -184,9 +186,10 @@ export async function scrollToDate({ date }) {
       var startIdx = bars.firstIndex();
       var endIdx = bars.lastIndex();
       var fromIdx = startIdx, toIdx = endIdx;
+      var fromFound = false;
       for (var i = startIdx; i <= endIdx; i++) {
         var v = bars.valueAt(i);
-        if (v && v[0] >= ${from} && fromIdx === startIdx) fromIdx = i;
+        if (!fromFound && v && v[0] >= ${from}) { fromIdx = i; fromFound = true; }
         if (v && v[0] <= ${to}) toIdx = i;
       }
       ts.zoomToBarsRange(fromIdx, toIdx);
@@ -196,7 +199,8 @@ export async function scrollToDate({ date }) {
   return { success: true, date, centered_on: timestamp, resolution, window: { from, to } };
 }
 
-export async function symbolInfo() {
+export async function symbolInfo({ _deps } = {}) {
+  const { evaluate } = _resolve(_deps);
   const result = await evaluate(`
     (function() {
       var chart = ${CHART_API};

@@ -1,14 +1,14 @@
 /**
  * Core drawing logic.
  */
-import { evaluate as _evaluate, getChartApi as _getChartApi, safeString, requireFinite } from '../connection.js';
+import { evaluate as _evaluate, evaluateAsync as _evaluateAsync, getChartApi as _getChartApi, safeString, requireFinite } from '../connection.js';
 
 function _resolve(deps) {
-  return { evaluate: deps?.evaluate || _evaluate, getChartApi: deps?.getChartApi || _getChartApi };
+  return { evaluate: deps?.evaluate || _evaluate, evaluateAsync: deps?.evaluateAsync || _evaluateAsync, getChartApi: deps?.getChartApi || _getChartApi };
 }
 
 export async function drawShape({ shape, point, point2, overrides: overridesRaw, text, _deps }) {
-  const { evaluate, getChartApi } = _resolve(_deps);
+  const { evaluate, evaluateAsync, getChartApi } = _resolve(_deps);
   const overrides = overridesRaw ? (typeof overridesRaw === 'string' ? JSON.parse(overridesRaw) : overridesRaw) : {};
   const apiPath = await getChartApi();
   const overridesStr = JSON.stringify(overrides || {});
@@ -22,7 +22,7 @@ export async function drawShape({ shape, point, point2, overrides: overridesRaw,
   if (point2) {
     const p2time = requireFinite(point2.time, 'point2.time');
     const p2price = requireFinite(point2.price, 'point2.price');
-    await evaluate(`
+    await evaluateAsync(`
       ${apiPath}.createMultipointShape(
         [{ time: ${p1time}, price: ${p1price} }, { time: ${p2time}, price: ${p2price} }],
         { shape: ${safeString(shape)}, overrides: ${overridesStr}, text: ${textStr} }
@@ -45,8 +45,8 @@ export async function drawShape({ shape, point, point2, overrides: overridesRaw,
 }
 
 export async function listDrawings() {
-  const apiPath = await getChartApi();
-  const shapes = await evaluate(`
+  const apiPath = await _getChartApi();
+  const shapes = await _evaluate(`
     (function() {
       var api = ${apiPath};
       var all = api.getAllShapes();
@@ -57,8 +57,8 @@ export async function listDrawings() {
 }
 
 export async function getProperties({ entity_id }) {
-  const apiPath = await getChartApi();
-  const result = await evaluate(`
+  const apiPath = await _getChartApi();
+  const result = await _evaluate(`
     (function() {
       var api = ${apiPath};
       var eid = ${safeString(entity_id)};
@@ -68,8 +68,9 @@ export async function getProperties({ entity_id }) {
       var methods = [];
       try { for (var key in shape) { if (typeof shape[key] === 'function') methods.push(key); } props.available_methods = methods; } catch(e) {}
       try { var pts = shape.getPoints(); if (pts) props.points = pts; } catch(e) { props.points_error = e.message; }
-      try { var ovr = shape.getProperties(); if (ovr) props.properties = ovr; } catch(e) {
-        try { var ovr2 = shape.properties(); if (ovr2) props.properties = ovr2; } catch(e2) { props.properties_error = e2.message; }
+      try { var ovr = shape.getProperties(); if (ovr !== undefined) props.properties = ovr; } catch(e) {
+        props.getProperties_error = e.message;
+        try { var ovr2 = shape.properties(); if (ovr2 !== undefined) props.properties = ovr2; } catch(e2) { props.properties_error = e2.message; }
       }
       try { props.visible = shape.isVisible(); } catch(e) {}
       try { props.locked = shape.isLocked(); } catch(e) {}
@@ -86,8 +87,8 @@ export async function getProperties({ entity_id }) {
 }
 
 export async function removeOne({ entity_id }) {
-  const apiPath = await getChartApi();
-  const result = await evaluate(`
+  const apiPath = await _getChartApi();
+  const result = await _evaluate(`
     (function() {
       var api = ${apiPath};
       var eid = ${safeString(entity_id)};
@@ -107,7 +108,7 @@ export async function removeOne({ entity_id }) {
 }
 
 export async function clearAll() {
-  const apiPath = await getChartApi();
-  await evaluate(`${apiPath}.removeAllShapes()`);
+  const apiPath = await _getChartApi();
+  await _evaluate(`${apiPath}.removeAllShapes()`);
   return { success: true, action: 'all_shapes_removed' };
 }

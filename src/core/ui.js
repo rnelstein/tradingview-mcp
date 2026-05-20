@@ -64,6 +64,7 @@ export async function openPanel({ panel, action }) {
       'trading': { dataName: 'trading-button', ariaLabel: 'Trading Panel' },
     };
     const sel = selectorMap[panel];
+    if (!sel) throw new Error(`Unknown panel "${panel}". Valid options: watchlist, alerts, trading, pine-editor, strategy-tester`);
     const result = await evaluate(`
       (function() {
         var dataName = ${JSON.stringify(sel.dataName)};
